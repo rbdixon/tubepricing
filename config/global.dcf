@@ -1,9 +1,11 @@
-data_loading: on
-cache_loading: on
-munging: on
-logging: off
-load_libraries: on
-libraries: reshape2, plyr, ggplot2, stringr, lubridate, RCurl
-as_factors: on
-data_tables: off
-recursive_loading: on
+data_loading: TRUE
+cache_loading: TRUE
+munging: TRUE
+logging: FALSE
+load_libraries: TRUE
+libraries: dplyr, ggplot2, stringr, lubridate, RCurl
+as_factors: TRUE
+data_tables: FALSE
+recursive_loading: TRUE
+version: 0.6
+attach_internal_libraries: TRUE
