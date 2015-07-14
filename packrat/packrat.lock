@@ -1,6 +1,6 @@
 PackratFormat: 1.4
 PackratVersion: 0.4.2.8
-RVersion: 3.1.2
+RVersion: 3.2.0
 Repos: CRAN=http://cran.rstudio.com/
 
 Package: BH
@@ -39,6 +39,17 @@ Source: CRAN
 Version: 0.11.4
 Hash: 1f684f6afd28079e4e609b49f353e49f
 
+Package: RcppEigen
+Source: CRAN
+Version: 0.3.2.5.0
+Hash: bf941aff73adfb2a01f9de7eb637df40
+Requires: Rcpp
+
+Package: SparseM
+Source: CRAN
+Version: 1.6
+Hash: ebefb2caf6ba73d3202d5153db1af0d8
+
 Package: assertthat
 Source: CRAN
 Version: 0.1
@@ -48,6 +59,12 @@ Package: bitops
 Source: CRAN
 Version: 1.0-6
 Hash: cb26464a8321628636b547518994c931
+
+Package: brglm
+Source: CRAN
+Version: 0.5-9
+Hash: ab397c3e2a17f6fa4bb52992c8a0c871
+Requires: profileModel
 
 Package: colorspace
 Source: CRAN
@@ -70,6 +87,12 @@ Version: 0.4.1
 Hash: 4ce03ad26fb9592dda1274f72c5d3257
 Requires: BH, DBI, R6, Rcpp, assertthat, lazyeval, magrittr
 
+Package: foreach
+Source: CRAN
+Version: 1.4.2
+Hash: fbdaa99f6c6bd4f252c5d8412f6e79c9
+Requires: iterators
+
 Package: ggplot2
 Source: CRAN
 Version: 1.0.1
@@ -80,6 +103,16 @@ Package: gtable
 Source: CRAN
 Version: 0.1.2
 Hash: 0cf4a2b54c02b35dec7e74a8ebed12a0
+
+Package: gtools
+Source: CRAN
+Version: 3.5.0
+Hash: 250a386e3d68eeba4ec6eb057721be6a
+
+Package: iterators
+Source: CRAN
+Version: 1.0.7
+Hash: b5320a58712688d5b18c207cf256ef3f
 
 Package: labeling
 Source: CRAN
@@ -108,6 +141,12 @@ Version: 0.2.1
 Hash: fc52fa39dfd216c44d64812ff31b1c67
 Requires: digest
 
+Package: minqa
+Source: CRAN
+Version: 1.2.4
+Hash: bf5030834197a011dc7bc9e117ab8ce3
+Requires: Rcpp
+
 Package: munsell
 Source: CRAN
 Version: 0.4.2
@@ -129,10 +168,21 @@ Version: 1.8.2
 Hash: a6d0a2d9382a6a6eef05f5271df94c5f
 Requires: Rcpp
 
+Package: profileModel
+Source: CRAN
+Version: 0.5-9
+Hash: 122950462321c92e539e4ab8ac2ffd58
+
 Package: proto
 Source: CRAN
 Version: 0.3-10
 Hash: 668a9e87cedbdc5f56c396edf1bd2648
+
+Package: quantreg
+Source: CRAN
+Version: 5.11
+Hash: bac5ce40d7995763543a826ca9f39534
+Requires: SparseM
 
 Package: reshape2
 Source: CRAN
