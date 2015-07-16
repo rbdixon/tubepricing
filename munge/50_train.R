@@ -38,9 +38,9 @@ caret_rmlse = function(data, lev, model) {
 # Set up training structure
 tc = trainControl(
   method = "repeatedcv",
-  repeats = 2,
+  repeats = 10,
   savePredictions = TRUE,
-  verboseIter = TRUE,
+  verboseIter = FALSE,
   summaryFunction = caret_rmlse
 )
 
@@ -53,9 +53,7 @@ rm(MODELS)
 if (!exists("MODELS")) {
   # Specify the types of models to train
   MODELS = data.frame(
-    method = c(
-      "lm"
-    )
+    method = c("lm", "rf")
   )
   
   MODELS %<>%
@@ -77,9 +75,9 @@ if (!exists("MODELS")) {
       data.frame(
         method = .$method, 
         model = I(list(.$model)), 
-        parameter = .$model$results[,1],
-        RMSLE = .$model$results[,2],
-        RMSLESD = .$model$results[,3],
+        # parameter = .$model$results[,1],
+        RMSLE = .$model$results[,"RMSLE"],
+        RMSLESD = .$model$results[,"RMSLESD"],
         predict = I(list(predictions)),
         LTEZ_cost = length(which(predictions <= 0)),
         NA_cost = length(which(is.na(predictions)))
@@ -89,4 +87,14 @@ if (!exists("MODELS")) {
     identity
 }
 print(MODELS)
+
+# Save model performance log
+MODELS %>% 
+  mutate(
+    date = now(),
+    commit = system("git describe --tags --dirty", intern=TRUE)
+  ) %>% 
+  select( date, commit, method, RMSLE, RMSLESD, contains("cost")) %>% 
+  write.table( "reports/training.log", append=TRUE, quote=FALSE, sep=",", col.names=FALSE, row.names=FALSE)
+
 cache("MODELS")
