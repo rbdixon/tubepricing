@@ -1,6 +1,8 @@
-# Brad's Project Template
+# Installation Caveats
 
-Based on [ProjectTemplate](http://projecttemplate.net) and customized a bit with:
+Ensure that:
 
-* A few functions in lib
-* An example.Rmd file to get started with
+* The homebrew `nlopt` package _is_not_ installed. It screws up `nloptr` installation.
+* There are no `~/.R/Makevars` defined.
+
+Then packrat should take care of installing necessary R packages.
