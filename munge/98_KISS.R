@@ -1,16 +1,8 @@
-# KISS
+# KISS - average of quotes
 submission_kiss = function(TRAIN, TEST) {
-  PRICES = TRAIN %>% 
-    mutate(
-      price = cost / quantity
-    ) %>% 
-    summarize(
-      price = mean(price)
-    )
-  
   SUBMISSION = TEST %>% 
     mutate(
-      cost = quantity * PRICES[1,"price"]
+      cost = mean(TRAIN$cost)
     ) %>% 
     select( id, cost )
   
