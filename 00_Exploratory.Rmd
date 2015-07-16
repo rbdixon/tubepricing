@@ -1,0 +1,189 @@
+---
+title: "Exploratory Analysis"
+author: "Brad Dixon <rd729c@att.com>"
+date: "July 15, 2015"
+output: 
+  html_document: 
+    keep_md: yes
+---
+
+```{r Initialization,include=FALSE}
+library(ProjectTemplate)
+load.project()
+theme_set(theme_bw())
+```
+
+# Training Data
+
+```{r merge_test_and_train}
+DATA = bind_rows(
+  mutate(train.set, dataset = "TRAIN", id = NA),
+  mutate(test.set,  dataset = "TEST")
+) %>% 
+  mutate_each( funs(factor), tube_assembly_id, supplier, dataset) %>% 
+  mutate( quote_date = ymd(quote_date))
+
+print(summary(DATA))
+```
+
+```{r pairs}
+DATA %>% 
+  filter(dataset == "TRAIN" ) %>% 
+  select( annual_usage, min_order_quantity, bracket_pricing, quantity, cost ) %>% 
+  mutate(
+    nzmoq = min_order_quantity > 0,
+    nzau = annual_usage > 0
+  ) %>% 
+  ggpairs(
+    lower=list(continuous="smooth", params=c(colour="blue") ),
+    diag=list(continuous="bar", params=c(colour="blue", fill="blue")),
+    upper=list(params=c(colour="blue", fill="blue"))
+  ) %>% 
+  print
+```
+
+## Quotes from Multiple Suppliers
+
+```{r quotes_from_multiple_suppliers}
+DATA %>% 
+  filter(dataset=="TRAIN") %>% 
+  group_by(tube_assembly_id) %>% 
+  summarize(
+    num_suppliers = length(unique(supplier))
+  ) %>% 
+  filter( num_suppliers > 1) %>% 
+  arrange( desc(num_suppliers))
+```
+
+* Some tube assemblies have quotes from multiple suppliers.
+
+```{r quotes_from_multiple_suppliers_and_date}
+DATA %>% 
+  filter(dataset=="TRAIN") %>% 
+  group_by(tube_assembly_id, quote_date) %>% 
+  summarize(
+    num_suppliers = length(unique(supplier))
+  ) %>% 
+  filter( num_suppliers > 1) %>% 
+  arrange( desc(num_suppliers))
+```
+
+* This seems due to shifting suppliers and not competitive bidding with one exception.
+
+```{r TA-08627}
+filter(DATA, tube_assembly_id=="TA-08627")
+```
+
+* Note the difference in `annual_usage`.
+
+## Tubes Quoted by Supplier
+
+```{r tubes_quoted_by_supplier}
+DATA %>% 
+  filter(dataset=="TRAIN") %>% 
+  group_by( supplier ) %>% 
+  summarize(
+    num_tubes = length(unique(tube_assembly_id))
+  ) %>% 
+  filter( num_tubes > 1) %>% 
+  arrange( desc(num_tubes ))
+```
+
+* Suppliers provide multiple types of tubes.
+
+## Repeated Quotes over Time
+
+```{r repeated_quotes_over_time}
+DATA %>% 
+  filter(dataset=="TRAIN") %>% 
+  group_by( tube_assembly_id, supplier ) %>% 
+  summarize(
+    num_quote_dates = length(unique(quote_date))
+  ) %>% 
+  filter( num_quote_dates > 1 ) %>% 
+  arrange( desc(num_quote_dates) )
+```
+
+* Occassional re-quotes on different dates by a supplier
+
+## Supplier and Tube Overlap Between Train and Test
+
+```{r tt_overlap}
+DATA %>% 
+  group_by( supplier, tube_assembly_id ) %>% 
+  summarize(
+    test = sum(which(dataset=="TEST")),
+    train = sum(which(dataset=="TRAIN"))
+  ) %>% 
+  filter( test>0, train>0)
+```
+
+* No overlap between test and train on a supplier and tube basis. We must use the attributes of the tube to predict the cost.
+
+```{r tt_overlap2}
+DATA %>% 
+  group_by( supplier ) %>% 
+  summarize(
+    test = length(which(dataset=="TEST")),
+    train = length(which(dataset=="TRAIN"))
+  ) %>% 
+  filter( test>0, train>0 ) %>% 
+  arrange(desc(train))
+```
+
+* Significant number of quotes from vendors present in both test and train.
+
+```{r tt_overlap3}
+DATA %>% 
+  group_by( tube_assembly_id ) %>% 
+  summarize(
+    test = length(which(dataset=="TEST")),
+    train = length(which(dataset=="TRAIN"))
+  ) %>% 
+  filter( test>0, train>0 ) %>% 
+  arrange(desc(train))
+```
+
+* But tubes are not present in both test and train. Got to use the tube characteristics to make a prediction.
+
+## Bracket Pricing Cost vs. Quantity
+
+```{r bracket_cost_vs_quantity}
+BRACKET_DISCOUNT = DATA %>% 
+  filter(
+    dataset=="TRAIN",
+    bracket_pricing=="Yes"
+  ) %>% 
+  group_by( tube_assembly_id, supplier, quote_date ) %>% 
+  mutate(
+    cost_fraction = cost / max(cost)
+  ) %>% 
+  select( quantity, cost, cost_fraction) %>% 
+  print
+
+ggplot( BRACKET_DISCOUNT, aes( quantity, cost_fraction) ) +
+  geom_point()
+```
+
+## Date
+
+```{r date_year}
+DATA %>% 
+  group_by( year=year(quote_date), dataset ) %>% 
+  summarize( num_quotes = n ()) %>% 
+  ggplot(aes(year, num_quotes, color=dataset) ) +
+    geom_line()
+```
+
+```{r date_quarter}
+DATA %>% 
+  group_by( quarter=factor(quarter(quote_date)), dataset ) %>% 
+  summarize( num_quotes = n ()) %>% 
+  ggplot(aes(quarter, num_quotes, fill=quarter) ) +
+    geom_bar(stat="identity") +
+    facet_grid( ~ dataset )
+```
+
+# Supplemental Data
+
+## BOM
