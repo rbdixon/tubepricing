@@ -10,6 +10,7 @@ output:
 ```{r Initialization,include=FALSE}
 library(ProjectTemplate)
 load.project()
+library(scales)
 theme_set(theme_bw())
 ```
 
@@ -261,14 +262,18 @@ COMP = rf.benchmark %>%
   tbl_df %>% 
   rename(benchmark=cost) %>% 
   mutate(
-    sub_rf_20150718 = read.csv("reports/submission_rf_20150718_RF-3-ge16d7f8-dirty.csv")[,2]
+    sub_rf_20150718_1 = read.csv("reports/submission_rf_20150718_RF-3-ge16d7f8-dirty.csv")[,2],
+    sub_rf_20150718_2 = read.csv("reports/submission_rf_20150718_RF-8-g53a7563-dirty.csv")[,2]
   ) %>% 
-  mutate_each( funs( benchmark - . ), starts_with("sub_")) %>% 
+  mutate_each( funs( log(.+1) - log(benchmark+1) ), starts_with("sub_")) %>% 
   gather( metric, value, -id, -benchmark )
 
 COMP %>% 
   ggplot( aes( benchmark, value, color=metric )) +
     geom_point(size=1) +
     geom_smooth() +
-    geom_hline(yintercept=0, color="black")
+    geom_hline(yintercept=0, color="black") +
+    xlab("Cost estimated by benchmark") +
+    ylab("Difference in log transformed price: predicted - benchmark") +
+    ggtitle("Model vs. RF Benchmark from Forum")
 ```
