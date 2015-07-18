@@ -1,5 +1,5 @@
 # Exploratory Analysis
-Brad Dixon <rd729c@att.com>  
+Brad Dixon <rbdixon@gmail.com>  
 July 15, 2015  
 
 

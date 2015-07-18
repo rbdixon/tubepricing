@@ -1,6 +1,6 @@
 ---
 title: "Exploratory Analysis"
-author: "Brad Dixon <rd729c@att.com>"
+author: "Brad Dixon <rbdixon@gmail.com>"
 date: "July 15, 2015"
 output: 
   html_document: 
