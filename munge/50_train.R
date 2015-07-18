@@ -3,57 +3,103 @@ set.seed(20150716)
 registerDoMC(cores=4)
 
 # Prepare train and test data
-prep_data = function(D) {
-  D %>% 
+prep_data = function(TRAIN, TEST, PARTS) {
+  R = bind_rows(
+    mutate(train.set, dataset = "TRAIN", id = 1:n()),
+    mutate(test.set,  dataset = "TEST")
+  ) %>% 
     tbl_df %>% 
-    mutate_each( funs(factor), tube_assembly_id, supplier ) %>% 
-    #     mutate(
-    #       # Extract date
-    #       quote_date = ymd(quote_date),
-    #       quote_year = year(quote_date),
-    #       quote_quarter = quarter(quote_date)
-    #     ) %>% 
+    mutate_each( funs(factor), tube_assembly_id, supplier, dataset ) %>% 
+    mutate(
+      # Random number for partitioning
+      randpart = runif(n()),
+      
+      # Extract date
+      quote_date = ymd(quote_date),
+      quote_year = scale(as.integer(year(quote_date))),
+      # quote_quarter = factor(quarter(quote_date))
+      
+      # Transform cost
+      cost = log(cost+1)
+    ) %>% 
+    
+    # Add PARTS details
+    left_join(PARTS, by="tube_assembly_id") %>%
+    # Replace NA values with zeros where required
+    mutate_each( funs( replace(., is.na(.), 0) ), num_parts) %>%
+    # Factorize where needed
+    mutate_each( funs( factor ), num_parts ) %>% 
+    
+    # Merge levels
+    mutate(
+      num_parts = revalue( num_parts, c("7"="7+", "8"="7+", "9"="7+", "10"="7+", "11"="7+", "12"="7+", "13"="7+"))
+    ) %>% 
+    
+    # Remove columns not used for modeling
     select(
       # Can't predict on ID alone since they are not duplicated in TEST
       -tube_assembly_id,
+      # Not all suppliers in TEST are present in TRAIN
       -supplier,
-      -annual_usage,
-      -min_order_quantity,
-      -bracket_pricing,
+      # Use the year and quarter
       -quote_date
-      #       -quote_year,
-      #       -quote_quarter
     )
+  
+  # Arrange columns
+  first_cols = c("id")
+  last_cols = c("cost", "randpart")
+  middle_cols = setdiff( colnames(R), c(first_cols, last_cols))
+  select_(R, .dots=c(first_cols, middle_cols, last_cols))
 }
 
 # Prep data
-TRAIN = prep_data( train.set[1:10, ])
-TEST =  prep_data(test.set)
+DATA = prep_data( train.set, test.set, PARTS )
+
+TRAIN = DATA %>% 
+  filter( dataset == "TRAIN" ) %>% 
+  # Subset to speed development
+  # filter( randpart <= 0.15 ) %>% 
+  select( -randpart, -dataset )
+  
+TEST = DATA %>% 
+  filter( dataset == "TEST" ) %>% 
+  select( -dataset, -randpart, -cost )
+
+# Export TRAIN and TEST
+export_csv( TRAIN, "train" )
+export_csv( TEST, "test" )
 
 # Evaluation function
-caret_rmlse = function(data, lev, model) {
-  c(RMSLE=rmsle(data$obs, data$pred))
+# function(obs, pred) sqrt( 1/length(obs) * sum((log(pred+1) - log(obs+1))^2))
+caret_rmsle = function(data, lev, model) {
+  # Calculate RMSLE in the non-log transformed space so it compares to the leaderboard
+  c(RMSLE=rmsle(
+    exp(data$obs)-1, 
+    exp(data$pred)-1
+  ))
 }
 
 # Set up training structure
 tc = trainControl(
   method = "repeatedcv",
-  repeats = 10,
+  number = 5,
+  # repeats = 5,
   savePredictions = TRUE,
-  verboseIter = FALSE,
-  summaryFunction = caret_rmlse
+  summaryFunction = caret_rmsle,
+  # summaryFunction = defaultSummary,
+  verboseIter = TRUE
 )
 
-# Training formula
-train_formula = cost ~ .
+# Training formula, exclude id and randpart
+train_formula = cost ~ . -id
 
 # Uncomment to retrain
-rm(MODELS)
+# rm(MODELS)
 
 if (!exists("MODELS")) {
   # Specify the types of models to train
   MODELS = data.frame(
-    method = c("lm", "rf")
+    method = c("rf")
   )
   
   MODELS %<>%
@@ -65,22 +111,26 @@ if (!exists("MODELS")) {
                      data = TRAIN,
                      method = .$method,
                      trControl = tc,
-                     metric = "RMSLE"
+                     metric = "RMSLE",
+                     maximize = FALSE
       )
     ) %>% 
     rowwise %>% 
     # Extract performance measures
     do({
-      predictions = predict(.$model, TEST)
+      # Reverse the log transformation!
+      predictions = exp(predict(.$model, TEST))-1
       data.frame(
-        method = .$method, 
-        model = I(list(.$model)), 
+        method = c(as.character(.$method)), 
+        model = I(list(.$model)),
         # parameter = .$model$results[,1],
-        RMSLE = .$model$results[,"RMSLE"],
-        RMSLESD = .$model$results[,"RMSLESD"],
+        RMSLE = min(.$model$results[,"RMSLE"]),
+        RMSLESD = min(.$model$results[,"RMSLESD"]),
         predict = I(list(predictions)),
         LTEZ_cost = length(which(predictions <= 0)),
-        NA_cost = length(which(is.na(predictions)))
+        NA_cost = length(which(is.na(predictions))),
+        train_p = nrow(TRAIN) / nrow(train.set),
+        resample_perf_NaN = length(which(is.nan(.$model$resample$RMSLE)))
       )
     }) %>% 
     arrange(desc(RMSLE)) %>% 
