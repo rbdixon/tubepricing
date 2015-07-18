@@ -13,7 +13,7 @@ load.project()
 theme_set(theme_bw())
 ```
 
-# Training Data
+# Primary Training Data
 
 ```{r merge_test_and_train}
 DATA = bind_rows(
@@ -27,19 +27,19 @@ print(summary(DATA))
 ```
 
 ```{r pairs}
-DATA %>% 
-  filter(dataset == "TRAIN" ) %>% 
-  select( annual_usage, min_order_quantity, bracket_pricing, quantity, cost ) %>% 
-  mutate(
-    nzmoq = min_order_quantity > 0,
-    nzau = annual_usage > 0
-  ) %>% 
-  ggpairs(
-    lower=list(continuous="smooth", params=c(colour="blue") ),
-    diag=list(continuous="bar", params=c(colour="blue", fill="blue")),
-    upper=list(params=c(colour="blue", fill="blue"))
-  ) %>% 
-  print
+# DATA %>% 
+#   filter(dataset == "TRAIN" ) %>% 
+#   select( annual_usage, min_order_quantity, bracket_pricing, quantity, cost ) %>% 
+#   mutate(
+#     nzmoq = min_order_quantity > 0,
+#     nzau = annual_usage > 0
+#   ) %>% 
+#   ggpairs(
+#     lower=list(continuous="smooth", params=c(colour="blue") ),
+#     diag=list(continuous="bar", params=c(colour="blue", fill="blue")),
+#     upper=list(params=c(colour="blue", fill="blue"))
+#   ) %>% 
+#   print
 ```
 
 ## Quotes from Multiple Suppliers
@@ -187,3 +187,88 @@ DATA %>%
 # Supplemental Data
 
 ## BOM
+
+```{r BOM}
+print(glimpse(BOM))
+
+BOMSUMMARY = BOM %>% 
+  group_by( tube_assembly_id ) %>% 
+  summarize(
+    num_components = n(),
+    num_parts = sum(quantity)
+  )
+print(summary(BOM))
+
+DATA %>% 
+  filter( dataset=="TRAIN" ) %>% 
+  select( tube_assembly_id, cost ) %>% 
+  left_join( BOMSUMMARY ) %>% 
+  ggplot( aes( num_parts, log(cost+1)) ) +
+    geom_point( colour = "blue" ) +
+    geom_smooth()
+```
+
+## TUBE
+
+```{r tube}
+print(glimpse(TUBE))
+print(summary(TUBE))
+table(TUBE$bend_radius>360)
+
+TUBE %>%
+  group_by(num_bends) %>% 
+  summarise_each( funs(min, mean, max), bend_radius)
+
+table(cut(TUBE$bend_radius, 10))
+table(TUBE$num_bends)
+table(TUBE$num_boss)
+table(TUBE$num_bracket)
+table(TUBE$other)
+```
+
+* `bend_radius`: There are some really bendy tubes! Looks like an alias to NA or an off scale value.
+* `end_a` and `end_x`: `NONE` should be `NA`.
+* `num_bends`, `num_boss`, `num_bracket`, `other` should be treated as categorical (factors).
+* `length` has an outlier with a value 1333.
+
+```{r tube_ggpairs}
+DATA %>% 
+  filter( dataset == "TRAIN", min_order_quantity==0 ) %>% 
+  left_join(TUBE) %>% 
+  select( diameter, wall, length, bend_radius, cost ) %>% 
+  # Trim some outliers
+  filter(
+    bend_radius < 500,
+    length < 1000
+  ) %>% 
+  # Lets be funky and multiply these physical measurements together
+  mutate_each( funs(rescale(., c(1,2))), diameter, wall, length, bend_radius) %>% 
+  mutate(
+    dimmult = diameter * wall * length * bend_radius
+  ) %>% 
+  ggpairs
+```
+
+# Benchmark Comparison
+
+## RF Benchmark
+
+From the [0.2748 with RF and log transformation
+](https://www.kaggle.com/ademyttenaere/caterpillar-tube-pricing/0-2748-with-rf-and-log-transformation/code) script.
+
+```{r rf_benchmark}
+COMP = rf.benchmark %>% 
+  tbl_df %>% 
+  rename(benchmark=cost) %>% 
+  mutate(
+    sub_rf_20150718 = read.csv("reports/submission_rf_20150718_RF-3-ge16d7f8-dirty.csv")[,2]
+  ) %>% 
+  mutate_each( funs( benchmark - . ), starts_with("sub_")) %>% 
+  gather( metric, value, -id, -benchmark )
+
+COMP %>% 
+  ggplot( aes( benchmark, value, color=metric )) +
+    geom_point(size=1) +
+    geom_smooth() +
+    geom_hline(yintercept=0, color="black")
+```
