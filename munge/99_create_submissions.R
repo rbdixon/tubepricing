@@ -2,7 +2,7 @@ MODELS %>%
   rowwise %>% 
   do({
     fn=sprintf("reports/submission_%s_%s%s%s_%s.csv", .$method,
-               year(now()), month(now()), day(now()),
+               year(now()), sprintf("%0.2d", month(now())), sprintf("%0.2d", day(now())),
                system("git describe --tags --dirty", intern=TRUE)
     )
     
