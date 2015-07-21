@@ -1,0 +1,4 @@
+
+*.RData filter=lfs diff=lfs merge=lfs -crlf
+*.tar.gz filter=lfs diff=lfs merge=lfs -crlf
+*.csv filter=lfs diff=lfs merge=lfs -crlf

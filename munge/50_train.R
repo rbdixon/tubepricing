@@ -16,7 +16,7 @@ prep_data = function(TRAIN, TEST, PARTS) {
       
       # Extract date
       quote_date = ymd(quote_date),
-      quote_year = scale(as.integer(year(quote_date))),
+      quote_year = as.integer(year(quote_date)) - min(as.integer(year(quote_date))),
       # quote_quarter = factor(quarter(quote_date))
       
       # Transform cost
@@ -30,10 +30,20 @@ prep_data = function(TRAIN, TEST, PARTS) {
     # Factorize where needed
     mutate_each( funs( factor ), num_parts ) %>% 
     
+    # Add TUBE detauls
+    left_join(TUBE, by="tube_assembly_id") %>% 
+    mutate(
+      bend_radius = replace( bend_radius, bend_radius==9999, 0 ),
+      length = pmin( length, mean(length)+2*sd(length) )
+    ) %>% 
+    mutate_each( funs(factor(replace(as.character(.), is.na(.), "SP-NONE"))), starts_with("spec"), material_id ) %>% 
+    mutate_each( funs(factor(replace(as.character(.), is.na(.), "No"))), starts_with("forming_") ) %>% 
+    
     # Merge levels
     mutate(
       num_parts = revalue( num_parts, c("7"="7+", "8"="7+", "9"="7+", "10"="7+", "11"="7+", "12"="7+", "13"="7+"))
     ) %>% 
+    mutate_each( funs(factor), num_bends, num_boss, num_bracket, other ) %>% 
     
     # Remove columns not used for modeling
     select(
@@ -94,7 +104,7 @@ tc = trainControl(
 train_formula = cost ~ . -id
 
 # Uncomment to retrain
-# rm(MODELS)
+#rm(MODELS)
 
 if (!exists("MODELS")) {
   # Specify the types of models to train
@@ -108,6 +118,7 @@ if (!exists("MODELS")) {
     # Train models
     do(
       model = train( train_formula ,
+                     # preProcess = "",
                      data = TRAIN,
                      method = .$method,
                      trControl = tc,

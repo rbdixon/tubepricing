@@ -155,6 +155,11 @@ Source: CRAN
 Version: 1.2
 Hash: d518b2a342a62e0add8c07403859ff13
 
+Package: gbm
+Source: CRAN
+Version: 2.1.1
+Hash: 3525eaea35b52d555e289d0a56e8de60
+
 Package: ggplot2
 Source: CRAN
 Version: 1.0.1
@@ -197,6 +202,11 @@ Package: jsonlite
 Source: CRAN
 Version: 0.9.16
 Hash: d96313db22c1ea2028538db1fc96fe5a
+
+Package: kernlab
+Source: CRAN
+Version: 0.9-20
+Hash: 16d24044b09d489de59e95598e727069
 
 Package: knitr
 Source: CRAN
@@ -364,6 +374,11 @@ Source: CRAN
 Version: 0.2.0
 Hash: 3b379415e9e88d4f559b380819893304
 Requires: dplyr, lazyeval, reshape2, stringi
+
+Package: tsne
+Source: CRAN
+Version: 0.1-2
+Hash: 739164ea5f14df267c70daa9555c9995
 
 Package: whisker
 Source: CRAN
